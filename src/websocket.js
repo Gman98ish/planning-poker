@@ -31,7 +31,10 @@ export const wsSubscribe = (channel, cb) => {
     data: { channel }
   }))
 
-  wsEvents.on(channel, cb)
+  wsEvents.on(channel, e => {
+    console.log({ channel, data: e.data })
+    cb(e)
+  })
 }
 
 wsEvents.on('id-registered', payload => {

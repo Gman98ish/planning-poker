@@ -15,7 +15,6 @@ const estimate = ref(null)
 
 useWebSocket(ws => {
   wsSubscribe(`sessions:${route.params.id}:joined`, e => {
-    console.log('here')
     sessionData.value.participants.push(e.data)
   })
 
@@ -28,10 +27,13 @@ useWebSocket(ws => {
   
   wsSubscribe(`sessions:${route.params.id}:reveal`, e => {
     sessionData.value.estimates = e.data.estimates
+    sessionData.value.revealed = true
   })
 
   wsSubscribe(`sessions:${route.params.id}:reset`, e => {
+    estimate.value = null
     sessionData.value.estimates = {}
+    sessionData.value.revealed = false
   })
 })
 
@@ -94,7 +96,7 @@ const estimates = computed(() => Object.keys(sessionData.value.estimates).map(
               <div class="absolute top-0 text-center pt-3 w-full"> (You)</div>
               <div>{{ estimate || '?' }}</div>
             </div>
-            <div class="w-28 text-center mx-3 border-4 border-blue-500 bg-blue-500 rounded py-16 text-2xl" v-for="participant in sessionData.participants" v-if="estimates.length == 0">
+            <div class="w-28 text-center mx-3 border-4 border-blue-500 bg-blue-500 rounded py-16 text-2xl" v-for="participant in sessionData.participants" v-if="!sessionData.revealed">
               <div class="text-white">{{ participant.name }}</div>
             </div>
             <div class="w-28 text-center mx-3 border-4 bg-white border-blue-500 rounded py-16 text-2xl" v-for="estimate in estimates" v-else>

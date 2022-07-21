@@ -2,7 +2,7 @@ import express from 'express'
 import { createServer } from 'http'
 import { WebSocketServer } from 'ws'
 import { v4 as uuid } from 'uuid'
-
+import fs from 'fs'
 import path from 'path';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
@@ -60,7 +60,7 @@ app.post(`/api/sessions/:id/join`, (req, res) => {
     return res.status(404).end()
   }
 
-  session.participants = session.participants.filter(p => p.id == req.body.id)
+  session.participants = session.participants.filter(p => p.id != req.body.id)
 
   const participant = {
     name: req.body.name,
@@ -85,6 +85,7 @@ app.post('/api/sessions/:id/estimate', (req, res) => {
   }, req.body.id)
 
   session.estimates[req.body.id] = req.body.value
+  res.status(200).end()
 })
 
 
@@ -96,9 +97,17 @@ app.post('/api/sessions/:id/reveal', (req, res) => {
   
   sessions[req.params.id].revealed = true
 
-  wsBroadcast(`sessions:${req.params.id}:reveal`, {
-    estimates: session.estimates
+  console.log({
+    estimates: session.estimates,
+    participants: session.participants,
+    processedEstimates: session.participants.reduce((obj, p) => ({...obj, [p.id]: session.estimates[p.id]}), {})
   })
+
+  wsBroadcast(`sessions:${req.params.id}:reveal`, {
+    estimates: session.participants.reduce((obj, p) => ({...obj, [p.id]: session.estimates[p.id] || '?' }), {})
+  })
+
+  res.status(200).end()
 })
 
 app.post('/api/sessions/:id/reset', (req, res) => {
@@ -111,6 +120,8 @@ app.post('/api/sessions/:id/reset', (req, res) => {
   sessions[req.params.id].estimates = {}
 
   wsBroadcast(`sessions:${req.params.id}:reset`, {})
+
+  res.status(200).end()
 })
 
 server.on("upgrade", (req, sock, head) => {
@@ -148,11 +159,33 @@ server.on("upgrade", (req, sock, head) => {
   })
 })
 
+let manifest = {}
+let template = fs.readFileSync(__dirname + '/public/index.html').toString()
+if (process.env.APP_ENV == 'production') {
+  manifest = fs.readFileSync(__dirname + '/public/manifest.json').toString()
+  manifest = JSON.parse(manifest)
+  template = template.replace(`<!--entry-point-->`, `<script src="/${manifest['src/main.js'].file}"></script>`)
+  template = template.replace(`<!--css-->`, `<script src="/${manifest['src/main.css'].file}"></script>`)
+} else {
+  console.log("dev")
+  template = template.replace(`<!--entry-point-->`, '<script type="module" src="http://localhost:5173/src/main.js"></script>')
+}
+
+console.log(template)
+
+app.get('/', (req, res) => {
+  res.header('Content-Type', 'text/html').end(template)
+})
+
+app.get('/index.html', (req, res) => {
+  res.header('Content-Type', 'text/html').end(template)
+})
+
 app.use(express.static('public'))
 
-
-app.get('/*', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
+app.get('/*', async (req, res) => {
+  console.log(template)
+  res.header('Content-Type', 'text/html').end(template)
 })
 
 
