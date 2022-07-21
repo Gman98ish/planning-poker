@@ -5,7 +5,7 @@ const wsEvents = new TinyEmitter()
 
 export let wsId = null
 
-const ws = new WebSocket('ws://localhost:8765/')
+const ws = new WebSocket(`${window.location.origin.replace('http', 'ws')}/ws`)
 
 export const useWebSocket = (cb) => {
   if (ws.readyState != WebSocket.OPEN) {

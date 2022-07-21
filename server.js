@@ -165,7 +165,7 @@ if (process.env.APP_ENV == 'production') {
   manifest = fs.readFileSync(__dirname + '/public/manifest.json').toString()
   manifest = JSON.parse(manifest)
   template = template.replace(`<!--entry-point-->`, `<script src="/${manifest['src/main.js'].file}"></script>`)
-  template = template.replace(`<!--css-->`, `<script src="/${manifest['src/main.css'].file}"></script>`)
+  template = template.replace(`<!--css-->`, `<link rel="stylesheet" href="/${manifest['src/main.css'].file}"></script>`)
 } else {
   console.log("dev")
   template = template.replace(`<!--entry-point-->`, '<script type="module" src="http://localhost:5173/src/main.js"></script>')
@@ -184,7 +184,6 @@ app.get('/index.html', (req, res) => {
 app.use(express.static('public'))
 
 app.get('/*', async (req, res) => {
-  console.log(template)
   res.header('Content-Type', 'text/html').end(template)
 })
 
